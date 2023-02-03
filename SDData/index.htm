@@ -1,0 +1,105 @@
+<html>
+
+<head>
+    <link rel="stylesheet" href="app.css">
+    <script src="app2.js"></script>
+</head>
+
+<body>
+    <button id="volUp" onclick="doButton(this);">volup</button>
+    <button id="volDown" onclick="doButton(this);">voldown</button>
+    <button id="prevStation" onclick="doButton(this);">prev station</button>
+    <button id="nextStation" onclick="doButton(this);">next station</button>
+
+    
+    <br>
+    <label id="statidx">-</label> : 
+    <label id="stat">-</label><br>
+    <label id="title">-</label><br>
+    <label id="vol">-</label><br>
+
+</body>
+<script>
+    // generic
+    window.addEventListener('load', onLoad);
+
+    function onLoad(event) {
+        setTimeout(initWebSocket, 100);
+    }
+
+    function doButton(object) {
+        sendWsMessage(object.id);
+    }
+
+    function handleJsonMessage(jsonObject) {
+        if (jsonObject.hasOwnProperty('temp1')) {
+            polyLineString += GetValueString(jsonObject.daysecond, jsonObject.temp1);
+            this.graph.setPolyLine(polyLineString);
+        }
+    }
+
+    function handleInfo(info) {
+        lines = info.split('\n');
+        lines.forEach(line => {
+            if (line.split(/icy-name:/i)[1] != undefined) document.getElementById("station").innerHTML = line.split(/icy-name:/i)[1];
+
+            if (line.split(/StreamTitle=/i)[1] != undefined) document.getElementById("title").innerHTML = line.split(/StreamTitle=/i)[1];
+        });
+
+
+    }
+
+
+    //#region Websockets
+    var gateway = `ws://${window.location.hostname}/ws`;
+
+    var websocket;
+
+    function initWebSocket() {
+
+        if (window.location.hostname == "127.0.0.1") gateway = "ws://webradio.local/ws"; // little trick to get offline htm working
+
+        console.log(`Trying to open a WebSocket connection ${gateway} ...`);
+
+        websocket = new WebSocket(gateway);
+        websocket.onopen = onOpen;
+        websocket.onclose = onClose;
+        websocket.onmessage = onMessage; // <-- add this line
+    }
+
+    function onOpen(event) {
+        console.log('Connection opened');
+    }
+
+    function onClose(event) {
+        console.log('Connection closed');
+        setTimeout(initWebSocket, 2000);
+    }
+
+    function onMessage(event) {
+        //document.getElementById("status").value = event.data;
+
+        //handleInfo(event.data);
+        let jsonObject = JSON.parse(event.data)
+        if (jsonObject) {
+            console.log("valid json !");
+            for (const key in jsonObject) {
+                if (jsonObject.hasOwnProperty(key)) {
+                    console.log(`${key} : ${jsonObject[key]}`)
+                    if (document.getElementById(key)) document.getElementById(key).innerHTML = jsonObject[key];
+                }
+            }
+
+        }
+        //handleJsonMessage(jsonObject);
+    }
+
+    function sendWsMessage(message) {
+        websocket.send(message);
+    }
+        //#endregion
+
+
+</script>
+
+</html>
