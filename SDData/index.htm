@@ -11,12 +11,14 @@
     <button id="prevStation" onclick="doButton(this);">prev station</button>
     <button id="nextStation" onclick="doButton(this);">next station</button>
 
-    
+
     <br>
-    <label id="statidx">-</label> : 
+    <label id="statidx">-</label> :
     <label id="stat">-</label><br>
     <label id="title">-</label><br>
     <label id="vol">-</label><br>
+    <select id="stationselect" onchange="handleSelect(this);"/>
+
 
 </body>
 <script>
@@ -25,6 +27,57 @@
 
     function onLoad(event) {
         setTimeout(initWebSocket, 100);
+        setTimeout(loadSettings, 100);
+    }
+
+    function loadSettings() {
+        getJsonFromApi('http://webradio.local/stations',
+            function (err, data) {
+
+                if (err !== null) {
+                    console.log('could not load stations: ' + err);
+                } else {
+                    console.log(data);
+                    fillStationSelector("stationselect", data.stations)
+
+                }
+            });
+
+    }
+
+    function fillStationSelector(selectId, data) {
+        let selector = document.getElementById('stationselect');
+        for (element in data) {
+            var opt = document.createElement("option");
+            opt.value = data[element];
+            opt.innerHTML = data[element]; // whatever property it has
+
+            // then append it to the select element
+            selector.appendChild(opt);
+        }
+
+    }
+
+    function getJsonFromApi(url, callback) {
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', url, true);
+        xhr.responseType = 'json';
+        xhr.onload = function () {
+            var status = xhr.status;
+            if (status === 200) {
+                callback(null, xhr.response);
+            } else {
+                callback(status, xhr.response);
+            }
+        };
+        xhr.send();
+    };
+
+    function handleSelect(object){
+        id = object.id;
+        value = object.value;
+        sendWsMessage("playstream " + value);
+
     }
 
     function doButton(object) {

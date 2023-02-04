@@ -20,6 +20,10 @@
 #include "sdWriter.h"
 #include "radios.h"
 
+#include "wifiCreds.h"
+#include "fileuploadPage.h"
+
+
 // Digital I/O used
 #define I2S_DOUT 22
 #define I2S_BCLK 26
@@ -30,8 +34,6 @@ Audio audio;
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 
-String ssid = "_THOES_";
-String password = "0598613193";
 
 int currentstation = 0;
 int currentVolume = 7;
@@ -187,6 +189,12 @@ bool audioConnecttoSD(const char *filename)
 // ********************** end audio ****************************
 
 // glue
+
+void handlePlayStream(char * streamlink)
+{
+  audioConnecttohost(streamlink);
+}
+
 void prevStation()
 {
   currentstation--;
@@ -290,6 +298,8 @@ void initWebserver()
 
 /* #region websockets */
 
+
+
 void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
 {
   AwsFrameInfo *info = (AwsFrameInfo *)arg;
@@ -299,10 +309,15 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
 
   if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT)
   {
-    if (strcmp((char *)data, "volUp") == 0)         volUp();
-    if (strcmp((char *)data, "volDown") == 0)       volDown();
-    if (strcmp((char *)data, "nextStation") == 0)   nextStation();
-    if (strcmp((char *)data, "prevStation") == 0)   prevStation();
+    if (strcmp((char *)data, "volUp") == 0)             volUp();
+    if (strcmp((char *)data, "volDown") == 0)           volDown();
+    if (strcmp((char *)data, "nextStation") == 0)       nextStation();
+    if (strcmp((char *)data, "prevStation") == 0)       prevStation();
+    if (strncmp((char *)data, "playstream ", 11) == 0)  handlePlayStream((char *)&data[11]);   // 11 is length of searchstring
+
+
+    
+    //if ((char *)data.startsWith("playstream")) handlePlayStream(data);
   }
 }
 
@@ -345,7 +360,8 @@ const char host[] = "webradio";
 void setup()
 {
   Serial.begin(115200);
-  WiFi.begin(ssid.c_str(), password.c_str());
+  Serial.printf("Trying to connect to you wifi on SSID: %s", ssid);
+  WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED)
     delay(1500);
 

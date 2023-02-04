@@ -18,5 +18,7 @@ char stations[][100] ={
         "playerservices.streamtheworld.com/api/livestream-redirect/TLPSTR22AAC.aac",
         "playerservices.streamtheworld.com/api/livestream-redirect/TLPSTR24.mp3", // Radio 10 Top 4000
         "playerservices.streamtheworld.com/api/livestream-redirect/TLPSTR24AAC.aac",
+        "http://149.56.185.82:8135",                                                   // Back to the 80`s (Dansk)
+
         
 };
