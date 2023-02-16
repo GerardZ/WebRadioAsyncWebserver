@@ -12,6 +12,9 @@
 #include <SD.h>
 #include <FS.h>
 
+#include <EEPROM.h>
+#define EEPROM_SIZE 16
+
 #include "AsyncJson.h"
 #include <ArduinoJson.h>
 
@@ -20,8 +23,9 @@
 #include "sdWriter.h"
 #include "radios.h"
 
+#include "fileUploadUtils.h"
+
 #include "wifiCreds.h"
-#include "fileuploadPage.h"
 
 
 // Digital I/O used
@@ -35,8 +39,14 @@ AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 
 
-int currentstation = 0;
+byte currentstation = 0;
 int currentVolume = 7;
+
+// ***********************************
+
+void reboot(){
+    ESP.restart();
+}
 
 //****************************************************************************************
 //                                   A U D I O _ T A S K                                 *
@@ -63,6 +73,7 @@ QueueHandle_t audioGetQueue = NULL;
 
 void sendConnectingStreamInfo();
 void sendStreamInfo();
+void stationChanged();
 
 void CreateQueues()
 {
@@ -199,22 +210,26 @@ void prevStation()
 {
   currentstation--;
   if (currentstation < 0 ) currentstation = (sizeof(stations) / sizeof(stations[0])) -1;
-  sendConnectingStreamInfo();
-  audioConnecttohost(stations[currentstation]);
+  stationChanged();
 }
 
 void nextStation()
 {
   currentstation = (currentstation + 1) % (sizeof(stations) / sizeof(stations[0]));
+  stationChanged();
+}
+
+void stationChanged(){
   sendConnectingStreamInfo();
   audioConnecttohost(stations[currentstation]);
+  EEPROM.write(0, currentstation);
+  EEPROM.commit();
 }
 
 void volUp()
 {
   currentVolume++;
-  if (currentVolume > 21)
-    currentVolume = 21;
+  if (currentVolume > 21) currentVolume = 21;
   audioSetVolume(currentVolume);
   sendStreamInfo();
 }
@@ -222,8 +237,7 @@ void volUp()
 void volDown()
 {
   currentVolume--;
-  if (currentVolume < 0)
-    currentVolume = 0;
+  if (currentVolume < 0) currentVolume = 0;
   audioSetVolume(currentVolume);
   sendStreamInfo();
 }
@@ -231,8 +245,6 @@ void volDown()
 /* #region webserver */
 void notFound(AsyncWebServerRequest *request)
 {
-  // hier check spiffs maken, wanneer ook daar niet gevonden, dan:
-
   request->send(404, "text/plain", "Not found");
 }
 
@@ -291,6 +303,8 @@ void initWebserver()
 
   server.onNotFound(notFound);
 
+  //configureWebServerUpload(server);
+
   server.begin();
 }
 
@@ -315,7 +329,7 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
     if (strcmp((char *)data, "prevStation") == 0)       prevStation();
     if (strncmp((char *)data, "playstream ", 11) == 0)  handlePlayStream((char *)&data[11]);   // 11 is length of searchstring
 
-
+    if (strcmp((char *)data, "reboot") == 0)            reboot();
     
     //if ((char *)data.startsWith("playstream")) handlePlayStream(data);
   }
@@ -361,6 +375,9 @@ void setup()
 {
   Serial.begin(115200);
   Serial.printf("Trying to connect to you wifi on SSID: %s", ssid);
+  
+  EEPROM.begin(EEPROM_SIZE);
+
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED)
     delay(1500);
@@ -381,7 +398,7 @@ void setup()
 
   audioInit();
 
-  audioConnecttohost(stations[currentstation]);
+  audioConnecttohost(stations[EEPROM.read(0)]);
   // audioSetVolume(15);
   volUp();
   log_i("current volume is: %d", audioGetVolume());

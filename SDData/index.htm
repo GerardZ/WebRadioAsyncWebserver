@@ -3,24 +3,101 @@
 <head>
     <link rel="stylesheet" href="app.css">
     <script src="app2.js"></script>
+
+    <style>
+        .buttong {
+            display: inline-block;
+            zoom: 1;
+            display: inline;
+            height: 25px;
+            vertical-align: baseline;
+            align-items: center;
+            font-size: 16px;
+            margin: 1px 1px;
+            cursor: pointer;
+
+            /*margin: 0 2px;
+outline: none;
+cursor: pointer;
+text-align: center;
+text-decoration: none;
+font: 14px/100% Arial, Helvetica, sans-serif;
+padding: .5em 2em .55em;
+*/
+            text-shadow: 0 1px 1px rgba(0, 0, 0, .3);
+            -webkit-border-radius: .5em;
+            -moz-border-radius: .5em;
+            border-radius: .5em;
+            -webkit-box-shadow: 0 1px 2px rgba(0, 0, 0, .2);
+            -moz-box-shadow: 0 1px 2px rgba(0, 0, 0, .2);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, .2);
+
+            color: #e9e9e9;
+            border: solid 1px #555;
+            background: #6e6e6e;
+            background: -webkit-gradient(linear, left top, left bottom, from(#888), to(#575757));
+            background: -moz-linear-gradient(top, #888, #575757);
+        }
+
+        .buttong:hover {
+            background: #616161;
+            background: -webkit-gradient(linear, left top, left bottom, from(#757575), to(#4b4b4b));
+            background: -moz-linear-gradient(top, #757575, #4b4b4b);
+            filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#757575', endColorstr='#4b4b4b');
+        }
+
+        .buttong:active {
+            color: #afafaf;
+            background: -webkit-gradient(linear, left top, left bottom, from(#575757), to(#888));
+            background: -moz-linear-gradient(top, #575757, #888);
+            filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#575757', endColorstr='#888888');
+        }
+    </style>
 </head>
 
 <body>
-    <button id="volUp" onclick="doButton(this);">volup</button>
-    <button id="volDown" onclick="doButton(this);">voldown</button>
-    <button id="prevStation" onclick="doButton(this);">prev station</button>
-    <button id="nextStation" onclick="doButton(this);">next station</button>
 
+    <div>
+        <div>
+            <svg width="500" height="150">
+                <rect width="500" height="150" rx="10" ry="10" style="fill:rgb(180,200,180); border:5px" />
+                
+                <g>
+                    <text id="displayText" width="500" height="50" x="10" y="35" dx="10" font-size="30" style="font-family: 'Brush Script MT', cursive; box-shadow: -5px -5px 5px #242323;">waiting for info...</text>
+                    <animateMotion path='M 300 0 L -5300 0' begin='0s' dur='120s' repeatCount="indefinite" />
+                </g>
 
-    <br>
-    <label id="statidx">-</label> :
-    <label id="stat">-</label><br>
-    <label id="title">-</label><br>
-    <label id="vol">-</label><br>
-    <select id="stationselect" onchange="handleSelect(this);"/>
+                <rect width="495" x=3px height="144" y=3px rx="10" ry="10" style="fill:transparent; stroke-width:6; stroke:rgb(180,200,180)" />
+                <text id="displayText" x="10" y="80" dx="10" font-size="18" style="font-family: 'Brush Script MT', cursive; box-shadow: -5px -5px 5px #242323;">vol:</text>
+                <line id="volIndicator" x1="50" y1="73" x2="94" y2="73" stroke-dasharray="3,1" style="stroke-width:12; stroke:black"/>
+            </svg>
+        </div>
+        <div>
+            <button id="volUp" class="buttong" onclick="doButton(this);">volup</button>
+            <button id="volDown" class="buttong" onclick="doButton(this);">voldown</button>
+            <button id="prevStation" class="buttong" onclick="doButton(this);">prev station</button>
+            <button id="nextStation" class="buttong" onclick="doButton(this);">next station</button>
+        </div>
+        <div>
+            <br>
+            <label id="statidx">-</label> :
+            <label id="stat">-</label><br>
+            <label id="title">-</label><br>
+            <label id="vol">-</label><br>
 
+            <select id="stationselect" onchange="handleSelect(this);" /><br><br><br>
 
+            <label for="fname">Streamlink:</label>
+            <input type="text" id="stream" />
+            <button onclick='submitStream("stream");'>play stream</button>
+            <br><br>
+
+            <button id="reboot" class="buttong" onclick="doButton(this);">reboot</button>
+        </div>
+    </div>
 </body>
+
+
 <script>
     // generic
     window.addEventListener('load', onLoad);
@@ -47,10 +124,13 @@
 
     function fillStationSelector(selectId, data) {
         let selector = document.getElementById('stationselect');
-        for (element in data) {
+        for (i=0; i < data.length; i += 2){
+
+        //}
+        //for (element in data) {
             var opt = document.createElement("option");
-            opt.value = data[element];
-            opt.innerHTML = data[element]; // whatever property it has
+            opt.value = data[i+1];
+            opt.innerHTML = data[i]; // whatever property it has
 
             // then append it to the select element
             selector.appendChild(opt);
@@ -73,10 +153,16 @@
         xhr.send();
     };
 
-    function handleSelect(object){
+    function handleSelect(object) {
         id = object.id;
-        value = object.value;
-        sendWsMessage("playstream " + value);
+        streamlink = object.value;
+        sendWsMessage("playstream " + streamlink);
+
+    }
+
+    function submitStream(id) {
+        streamlink = document.getElementById(id).value;
+        sendWsMessage("playstream " + streamlink);
 
     }
 
@@ -101,6 +187,35 @@
 
 
     }
+
+    function setAnimateDisplay(jsonObject) {
+        // {"title":"Rolling Stones - Wild Horses","stat":"Radio 10 60&70's Hits","statidx":"6","vol":"5"}
+        if (jsonObject.hasOwnProperty("title") && jsonObject.hasOwnProperty("stat")) {
+            let animateText = "station: " + jsonObject["stat"] + ", now playing: " + jsonObject["title"] + ".&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
+            animateText += animateText;
+            animateText += animateText;
+            animateText += animateText;
+            animateText += animateText;
+
+            console.log(animateText);
+            document.getElementById("displayText").innerHTML = animateText;
+            document.getElementById("displayText").animate = 'attributeType="XML" attributeName="x" values="400;-400" dur="15s" repeatCount="indefinite"';
+
+        }
+        //volIndicator
+        if (jsonObject.hasOwnProperty("vol")){
+            volumeIndicator = document.getElementById("volIndicator");
+            x1 = parseInt(volumeIndicator.getAttribute('x1'));
+            x2 = parseInt(4 * jsonObject["vol"]);
+            volumeIndicator.setAttribute('x2', x1 + x2);
+
+        }
+
+
+
+    }
+
+
 
 
     //#region Websockets
@@ -142,6 +257,8 @@
                     if (document.getElementById(key)) document.getElementById(key).innerHTML = jsonObject[key];
                 }
             }
+
+            setAnimateDisplay(jsonObject);
 
         }
         //handleJsonMessage(jsonObject);
